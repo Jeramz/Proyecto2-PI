@@ -13,9 +13,15 @@ public class Pregunta {
     String estado;
     String pregunta;
     String respuesta;
+    String[] opciones;
     
     public Pregunta(){
         estado="libre";
+    }
+    
+    public void setOpciones(String op1,String op2,String op3,String op4){
+        String[] aux={op1,op2,op3,op4};
+        this.opciones=aux;
     }
     
     public String getRespuesta(){

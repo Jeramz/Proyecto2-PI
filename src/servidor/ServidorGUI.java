@@ -12,6 +12,10 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.DatagramPacket;
+import java.net.InetAddress;
+import java.net.MulticastSocket;
+import java.net.ServerSocket;
 import java.util.ArrayList;
 import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
@@ -39,8 +43,11 @@ public class ServidorGUI extends javax.swing.JFrame {
         listaPreguntas=new ArrayList();
         jDialogFileChooser = new javax.swing.JDialog();
         jFileChooser2 = new javax.swing.JFileChooser();
-        jLabel1 = new javax.swing.JLabel();
-        jButton1 = new javax.swing.JButton();
+        lbServidor = new javax.swing.JLabel();
+        btCargarPreguntas = new javax.swing.JButton();
+        lbTiempoMax = new javax.swing.JLabel();
+        tfTiempoMax = new javax.swing.JTextField();
+        btGuardarCambios = new javax.swing.JButton();
 
         jDialogFileChooser.setSize(new java.awt.Dimension(600, 340));
 
@@ -68,16 +75,20 @@ public class ServidorGUI extends javax.swing.JFrame {
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
-        jLabel1.setFont(new java.awt.Font("Dialog", 1, 24)); // NOI18N
-        jLabel1.setForeground(new java.awt.Color(0, 0, 255));
-        jLabel1.setText("Servidor");
+        lbServidor.setFont(new java.awt.Font("Dialog", 1, 24)); // NOI18N
+        lbServidor.setForeground(new java.awt.Color(0, 0, 255));
+        lbServidor.setText("Servidor");
 
-        jButton1.setText("Cargar preguntas");
-        jButton1.addActionListener(new java.awt.event.ActionListener() {
+        btCargarPreguntas.setText("Cargar preguntas");
+        btCargarPreguntas.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton1ActionPerformed(evt);
+                btCargarPreguntasActionPerformed(evt);
             }
         });
+
+        lbTiempoMax.setText("Tiempo Máximo (Minutos)");
+
+        btGuardarCambios.setText("Guardar Cambios");
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
@@ -86,32 +97,67 @@ public class ServidorGUI extends javax.swing.JFrame {
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jLabel1)
-                    .addComponent(jButton1))
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                    .addComponent(lbServidor)
+                    .addComponent(btCargarPreguntas)
+                    .addGroup(layout.createSequentialGroup()
+                        .addComponent(lbTiempoMax)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                        .addComponent(tfTiempoMax, javax.swing.GroupLayout.PREFERRED_SIZE, 60, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(btGuardarCambios))
+                .addContainerGap(20, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(jLabel1)
+                .addComponent(lbServidor)
                 .addGap(18, 18, 18)
-                .addComponent(jButton1)
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addComponent(btCargarPreguntas)
+                .addGap(18, 18, 18)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(lbTiempoMax)
+                    .addComponent(tfTiempoMax, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(btGuardarCambios)
+                .addContainerGap(25, Short.MAX_VALUE))
         );
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
+    
+    public void iniciarServidor(){
+        try
+      {  System.out.println("Binding to port " + 12345 + ", please wait  ...");
+         server = new ServerSocket(12345);  
+         System.out.println("Server started: " + server);
+         iniciarMulticast();
+         while (true)
+        {      System.out.println("Waiting for a client ..."); 
+              client = new ServerThread(this,server.accept());
+              System.out.println("Client accepted: " + client.getName());
+              try
+                {  client.open();
+                   client.start();
+                }catch(IOException ioe){  
+                    System.out.println("Error opening thread: " + ioe); }
+
+                   }
+      }catch(IOException ioe){  
+          System.out.println(ioe); 
+      }
+    }
 
     public void cargarPreguntas(){
         String linea;
         String pregunta[]=new String[4];
+        
         try{
             while((linea=brPreguntas.readLine())!= null){
                 pregunta=linea.split("//");
                 Pregunta preguntas=new Pregunta();
                 preguntas.setPregunta(pregunta[0].replaceAll("~", "\n"));
                 preguntas.setRespuesta(brPreguntas.readLine());
+                preguntas.setOpciones(pregunta[1], pregunta[2], pregunta[3], pregunta[4]);
                 try{
                     listaPreguntas.add(preguntas);
                 }catch(Exception e){
@@ -125,11 +171,27 @@ public class ServidorGUI extends javax.swing.JFrame {
         }
     }
     
-    private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
+    public void iniciarMulticast() throws IOException{
+    smc = new MulticastSocket ();
+     // Creamos el grupo multicast:
+     InetAddress group = InetAddress.getByName ("230.0.0.0");
+     
+    dgp = new DatagramPacket(vacio, 0, group,10000);
+   }
+
+    public MulticastSocket getSmc() {
+        return smc;
+    }
+
+    public DatagramPacket getDgp() {
+        return dgp;
+    }
+    
+    private void btCargarPreguntasActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btCargarPreguntasActionPerformed
         // TODO add your handling code here:
         jDialogFileChooser.setVisible(true);
         
-    }//GEN-LAST:event_jButton1ActionPerformed
+    }//GEN-LAST:event_btCargarPreguntasActionPerformed
 
     private void jFileChooser2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jFileChooser2ActionPerformed
         // TODO add your handling code here:
@@ -146,11 +208,15 @@ public class ServidorGUI extends javax.swing.JFrame {
             brPreguntas=new BufferedReader(new InputStreamReader(frPreguntas));
             
             this.cargarPreguntas();
+            brPreguntas.close();
+            fPreguntas.close();
+            frPreguntas.close();
             jDialogFileChooser.setVisible(false);
             }catch(IOException e){
                 e.printStackTrace();
                 System.out.println("error"+e.getMessage());
             }
+            
         }else if(command.equals(JFileChooser.CANCEL_SELECTION)){
             jDialogFileChooser.setVisible(false);
         }
@@ -192,17 +258,28 @@ public class ServidorGUI extends javax.swing.JFrame {
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JButton jButton1;
+    private javax.swing.JButton btCargarPreguntas;
+    private javax.swing.JButton btGuardarCambios;
     private javax.swing.JDialog jDialogFileChooser;
     private javax.swing.JFileChooser jFileChooser2;
-    private javax.swing.JLabel jLabel1;
+    private javax.swing.JLabel lbServidor;
+    private javax.swing.JLabel lbTiempoMax;
+    private javax.swing.JTextField tfTiempoMax;
     String rutaPregunta;
     FileInputStream fPreguntas;
     BufferedReader brPreguntas;
     DataInputStream frPreguntas;
     ArrayList listaPreguntas;
     
+    private ServerSocket     server = null;
+    private ServerThread client = null;
     
+    //para multicast
+    //Creamos el MulticastSocket sin especificar puerto.
+    private MulticastSocket smc=null;
+    // Creamos un datagrama vacío en principio:
+    byte [] vacio = new byte [0];
+    private DatagramPacket dgp =null;
     // End of variables declaration//GEN-END:variables
 
 }

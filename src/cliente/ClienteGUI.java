@@ -5,6 +5,15 @@
  */
 package cliente;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.net.DatagramPacket;
+import java.net.InetAddress;
+import java.net.MulticastSocket;
+import java.net.Socket;
+import java.net.UnknownHostException;
+
 /**
  *
  * @author jesus
@@ -16,6 +25,42 @@ public class ClienteGUI extends javax.swing.JFrame {
      */
     public ClienteGUI() {
         initComponents();
+        System.out.println("Establishing connection. Please wait ...");
+      try
+      {  socket = new Socket("127.0.0.1", 12345);
+         System.out.println("Connected: " + socket);
+         arrancar();
+         iniciarEscuchaMulticast();
+          
+      }catch(UnknownHostException uhe)
+      {  
+          System.out.println("Host unknown: " + uhe.getMessage());
+      }
+      catch(IOException ioe)
+      {  
+          System.out.println("Unexpected exception: " + ioe.getMessage());
+      }
+      
+      String line = "";
+     while (!(line.equals("terminar")))
+      { 
+       try
+          { 
+            //toma los valores de la consola
+            line=console.readLine();
+            //manda el mensaje al servidor
+            streamOut.writeUTF(line);
+            streamOut.flush();
+                                  
+            //imprime lo que manda el server
+            line = entrada.readUTF();
+            System.out.print("lo que envia el server desde cliente "+line);
+                      
+         }
+         catch(IOException ioe)
+         {  System.out.println("Sending error: " + ioe.getMessage());
+         }
+      } 
     }
 
     /**
@@ -26,7 +71,7 @@ public class ClienteGUI extends javax.swing.JFrame {
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
-
+        
         lbTitulo = new javax.swing.JLabel();
         lbPreguntaSeleccionada = new javax.swing.JLabel();
         jScrollPane1 = new javax.swing.JScrollPane();
@@ -52,6 +97,7 @@ public class ClienteGUI extends javax.swing.JFrame {
 
         lbPreguntaSeleccionada.setText("Pregunta :");
 
+        taPregunta.setEditable(false);
         taPregunta.setColumns(20);
         taPregunta.setRows(5);
         jScrollPane1.setViewportView(taPregunta);
@@ -67,14 +113,31 @@ public class ClienteGUI extends javax.swing.JFrame {
         lbPreguntas.setText("Preguntas");
 
         btObtener.setText("Obtener");
+        btObtener.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btObtenerActionPerformed(evt);
+            }
+        });
 
         lbTiempoTranscurrido.setText("Tiempo transcurrido");
+
+        tfTiempoTranscurrido.setEditable(false);
 
         lbMinutos.setText("Minutos");
 
         btEnviar.setText("Enviar");
+        btEnviar.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btEnviarActionPerformed(evt);
+            }
+        });
 
         btCancelar.setText("Cancelar");
+        btCancelar.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btCancelarActionPerformed(evt);
+            }
+        });
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
@@ -154,6 +217,85 @@ public class ClienteGUI extends javax.swing.JFrame {
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
+    
+    public void iniciarEscuchaMulticast() throws IOException{
+    //Creamos un socket multicast en el puerto 10000:
+     smcR = new MulticastSocket (10000);
+    //Configuramos el grupo (IP) a la que nos conectaremos
+     group = InetAddress.getByName ("230.0.0.0");
+    //Nos unimos al grupo:
+    smcR.joinGroup (group);
+    
+    //lanzo el subproceso que va a estar escuchando al multicast
+    escuchandoM = new Thread(){
+        @Override
+        public void run(){
+            escuchandoMultiast();
+        }
+    };
+    escuchandoM.start();
+             
+    }
+    
+    public void escuchandoMultiast(){
+        initComponents();
+       while(true){
+            // Los paquetes enviados son de 256 bytes de maximo
+            byte [] buffer = new byte [256];
+
+            //Creamos el datagrama en el que recibiremos el paquete del socket multicast
+            DatagramPacket dgp = new DatagramPacket (buffer, buffer.length);
+            try{
+                // Recibimos el paquete del socket:
+                 smcR.receive (dgp);
+                 // Adaptamos la información al tamaño de lo que se envió por si se envió menos de 256):
+                 byte [] buffer2 = new byte [dgp.getLength ()];
+                 // Copiamos los datos en el nuevo array de tamaño adecuado:
+                 System.arraycopy (dgp.getData (),0,buffer2,0, dgp.getLength ());
+
+                 //Vemos los datos recibidos por pantalla:
+                 String salida = new String (buffer2);
+                 System.out.println (salida);
+                 System.out.print("Escuchando del server");
+            }catch(IOException e){
+                System.out.println("Error en el multicast al recibir en el cliente");
+                e.printStackTrace();
+            }
+       }
+   }
+   /**
+    * se abren los streams para comunicarse con el servior, y se toman los valores que se van a mandar
+    * al servidor desde consola
+    * @throws IOException 
+    */
+   public void arrancar() throws IOException
+   {   
+       entrada   = new DataInputStream(socket.getInputStream());
+       streamOut = new DataOutputStream(socket.getOutputStream());
+       console = new DataInputStream(System.in);
+   }
+   public void stop()
+   {  try
+      {  if (entrada   != null)  console.close();
+         if (streamOut != null)  streamOut.close();
+         if (socket    != null)  socket.close();
+      }
+      catch(IOException ioe)
+      {  System.out.println("Error closing ...");
+      }
+   }
+
+    private void btEnviarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btEnviarActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_btEnviarActionPerformed
+
+    private void btCancelarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btCancelarActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_btCancelarActionPerformed
+
+    private void btObtenerActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btObtenerActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_btObtenerActionPerformed
 
     /**
      * @param args the command line arguments
@@ -207,5 +349,14 @@ public class ClienteGUI extends javax.swing.JFrame {
     private javax.swing.JRadioButton rbOpcion4;
     private javax.swing.JTextArea taPregunta;
     private javax.swing.JTextField tfTiempoTranscurrido;
+    
+    private Socket socket              = null;
+   private DataInputStream  console, entrada  = null;
+   private DataOutputStream streamOut = null;
+   
+   //para que el cliente reciba lo del multicast
+    MulticastSocket smcR = null;
+    InetAddress group = null;
+    Thread escuchandoM;
     // End of variables declaration//GEN-END:variables
 }
