@@ -12,12 +12,22 @@ package servidor;
 public class Pregunta {
     String estado;
     String pregunta;
+    String respuesta;
     
     public Pregunta(){
         estado="libre";
     }
     
+    public String getRespuesta(){
+        return respuesta;
+    }
+    
+    public void setRespuesta(String respuesta){
+        this.respuesta=respuesta;
+    }
+    
     public void setPregunta(String pregunta){
+        this.pregunta=pregunta;
     }
     
     public String getPregunta(){

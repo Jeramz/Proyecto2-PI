@@ -6,6 +6,16 @@
 
 package servidor;
 
+import java.io.BufferedReader;
+import java.io.DataInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import javax.swing.JFileChooser;
+import javax.swing.JOptionPane;
+
 /**
  *
  * @author jesus
@@ -25,13 +35,20 @@ public class ServidorGUI extends javax.swing.JFrame {
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
-
+        
+        listaPreguntas=new ArrayList();
         jDialogFileChooser = new javax.swing.JDialog();
         jFileChooser2 = new javax.swing.JFileChooser();
         jLabel1 = new javax.swing.JLabel();
         jButton1 = new javax.swing.JButton();
 
         jDialogFileChooser.setSize(new java.awt.Dimension(600, 340));
+
+        jFileChooser2.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jFileChooser2ActionPerformed(evt);
+            }
+        });
 
         javax.swing.GroupLayout jDialogFileChooserLayout = new javax.swing.GroupLayout(jDialogFileChooser.getContentPane());
         jDialogFileChooser.getContentPane().setLayout(jDialogFileChooserLayout);
@@ -86,10 +103,58 @@ public class ServidorGUI extends javax.swing.JFrame {
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
+    public void cargarPreguntas(){
+        String linea;
+        String pregunta[]=new String[4];
+        try{
+            while((linea=brPreguntas.readLine())!= null){
+                pregunta=linea.split("//");
+                Pregunta preguntas=new Pregunta();
+                preguntas.setPregunta(pregunta[0].replaceAll("~", "\n"));
+                preguntas.setRespuesta(brPreguntas.readLine());
+                try{
+                    listaPreguntas.add(preguntas);
+                }catch(Exception e){
+                    e.printStackTrace();
+                System.out.println("error"+e.getMessage());
+                }
+            }
+        }catch(IOException e){
+            e.printStackTrace();
+            System.out.println("error"+e.getMessage());
+        }
+    }
+    
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
         // TODO add your handling code here:
         jDialogFileChooser.setVisible(true);
+        
     }//GEN-LAST:event_jButton1ActionPerformed
+
+    private void jFileChooser2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jFileChooser2ActionPerformed
+        // TODO add your handling code here:
+        JFileChooser selectorArchivo =(JFileChooser)evt.getSource();
+        String command =evt.getActionCommand();
+        if(command.equals(JFileChooser.APPROVE_SELECTION)){
+            File archivoSeleccionado;
+            archivoSeleccionado=selectorArchivo.getSelectedFile();
+            rutaPregunta=archivoSeleccionado.getAbsolutePath();
+            try{
+                
+            fPreguntas=new FileInputStream(rutaPregunta);
+            frPreguntas=new DataInputStream(fPreguntas);
+            brPreguntas=new BufferedReader(new InputStreamReader(frPreguntas));
+            
+            this.cargarPreguntas();
+            jDialogFileChooser.setVisible(false);
+            }catch(IOException e){
+                e.printStackTrace();
+                System.out.println("error"+e.getMessage());
+            }
+        }else if(command.equals(JFileChooser.CANCEL_SELECTION)){
+            jDialogFileChooser.setVisible(false);
+        }
+    }//GEN-LAST:event_jFileChooser2ActionPerformed
 
     /**
      * @param args the command line arguments
@@ -131,6 +196,13 @@ public class ServidorGUI extends javax.swing.JFrame {
     private javax.swing.JDialog jDialogFileChooser;
     private javax.swing.JFileChooser jFileChooser2;
     private javax.swing.JLabel jLabel1;
+    String rutaPregunta;
+    FileInputStream fPreguntas;
+    BufferedReader brPreguntas;
+    DataInputStream frPreguntas;
+    ArrayList listaPreguntas;
+    
+    
     // End of variables declaration//GEN-END:variables
 
 }
